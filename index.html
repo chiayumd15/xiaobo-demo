@@ -343,7 +343,7 @@ h1,h2,.serif{font-family:var(--serif);font-weight:500;letter-spacing:.06em}
 const FS = 250, UV = 25208.3 / 32768;
 const fp1 = [], fp2 = [];          // µV 樣本緩衝
 const MAX_BUF = FS * 30;           // 保留 30 秒
-let h3connected = false, simMode = false, simTimer = null;
+let h3connected = false, simMode = false, simTimer = null, h3dev = null;
 
 // H3 串流解析器 (state machine)
 const S = {mode:'text',line:[],hdr:[],hdrLen:0,n:0,m:0,div:[],tw:0,data:[],trail:[]};
