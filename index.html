@@ -834,11 +834,11 @@ const FL={state:'calib',phase:0,t0:0,lo:[],hi:[],eLo:null,eHi:null,score:50,alt:
 const flights=[];
 const CAL_PH=[{t:10,h:'放 空',p:'看著前方發呆 10 秒，什麼都不要想'},
               {t:10,h:'專 心',p:'心算：從 100 開始每次減 7，用力想！'}];
-let mtn1,mtn2,clouds;
+let mtn0,mtn1,mtn2,clouds;
 function genMtn(n,amp,base){const a=[];let v=base;for(let i=0;i<n;i++){v+=(Math.random()-.5)*amp;v=Math.max(base-amp*1.2,Math.min(base+amp*1.2,v));a.push(v);}return a;}
 function resetFlight(){
   Object.assign(FL,{state:'calib',phase:0,t0:Date.now(),lo:[],hi:[],eLo:null,eHi:null,score:50,alt:0,vel:0,maxAlt:0,start:0,time:0,lowT:0,scroll:0,expl:[]});
-  mtn1=genMtn(40,60,470);mtn2=genMtn(30,110,520);
+  mtn2=genMtn(30,110,500);mtn1=genMtn(40,70,545);mtn0=genMtn(22,36,590);
   clouds=Array.from({length:9},()=>({x:Math.random()*1300,y:60+Math.random()*260,r:30+Math.random()*40,s:.4+Math.random()*.5}));
   const g=document.getElementById('fl-go');g.disabled=true;g.textContent='校準中';
   document.getElementById('fl-msg').textContent='';
@@ -902,15 +902,15 @@ function flightTick(){
 function flightPhysics(dt){
   if(FL.state==='flying'){
     const s=Math.max(0,Math.min(100,FL.score));
-    FL.vel+=((s-50)/50)*140*dt;FL.vel*=Math.exp(-4*dt);FL.alt+=FL.vel*dt;
+    FL.vel+=((s-50)/50)*260*dt;FL.vel*=Math.exp(-4*dt);FL.alt+=FL.vel*dt;
     if(FL.alt>100){FL.alt=100;FL.vel=0;}if(FL.alt<0){FL.alt=0;FL.vel=0;}
     FL.maxAlt=Math.max(FL.maxAlt,FL.alt);FL.time=(Date.now()-FL.start)/1000;
-    FL.scroll+=(80+s*1.6)*dt;
+    FL.scroll+=(160+s*3.2)*dt;
     if(FL.alt<=0.5&&s<45)FL.lowT+=dt;else FL.lowT=Math.max(0,FL.lowT-2*dt);
     if(FL.lowT>=3.2){FL.state='crashing';FL.explT=0;
       FL.expl=Array.from({length:40},()=>({x:0,y:0,vx:(Math.random()-.5)*7,vy:-Math.random()*7,life:1,r:6+Math.random()*14,smoke:Math.random()<.4}));}
   }else if(FL.state==='crashing')FL.explT+=dt;
-  else FL.scroll+=20*dt;
+  else FL.scroll+=40*dt;
 }
 let flLast=0;
 function flightFrame(ts){
@@ -937,14 +937,19 @@ function drawFlight(dt=0.016){
   ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
   if(k>0.55){ctx.fillStyle=`rgba(232,213,168,${(k-0.55)*1.4})`;
     for(let i=0;i<40;i++){const x=(i*173+FL.scroll*0.1)%W,y=(i*97)%(H*0.5);ctx.fillRect(x,y,1.5,1.5);}}
-  for(const c of clouds){c.x-=(40+s*0.8)*c.s*dt;if(c.x<-c.r*3)c.x=W+c.r*3;
-    ctx.fillStyle=`rgba(200,205,220,${0.05+k*0.06})`;ctx.beginPath();
+  const spd=160+s*3.2;
+  for(const c of clouds){c.x-=spd*0.45*c.s*dt;if(c.x<-c.r*3)c.x=W+c.r*3;
+    ctx.fillStyle=`rgba(200,205,220,${0.10+k*0.08})`;ctx.beginPath();
     ctx.ellipse(c.x,c.y,c.r*1.6,c.r*0.55,0,0,6.283);ctx.ellipse(c.x-c.r*0.6,c.y+4,c.r*0.9,c.r*0.45,0,0,6.283);ctx.ellipse(c.x+c.r*0.7,c.y+3,c.r,c.r*0.5,0,0,6.283);ctx.fill();}
-  drawMtn(ctx,mtn2,W,H,FL.scroll*0.25,'#141828');
-  drawMtn(ctx,mtn1,W,H,FL.scroll*0.6,'#0c0e18');
+  // 高速時的速度線
+  if(s>60){ctx.strokeStyle=`rgba(232,213,168,${(s-60)/160})`;ctx.lineWidth=1.5;
+    for(let i=0;i<7;i++){const x=W-((FL.scroll*2.2+i*260)%(W+300)),y=40+(i*83)%(H-160);ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+70+s,y);ctx.stroke();}}
+  drawMtn(ctx,mtn2,W,H,FL.scroll*0.3,'#1a2036','rgba(201,168,106,.10)');
+  drawMtn(ctx,mtn1,W,H,FL.scroll*0.7,'#0f121d','rgba(201,168,106,.22)');
+  drawMtn(ctx,mtn0,W,H,FL.scroll*1.25,'#050609','rgba(201,168,106,.42)');
   ctx.fillStyle='#07080b';ctx.fillRect(0,G,W,30);
-  ctx.strokeStyle='rgba(201,168,106,.35)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,G);ctx.lineTo(W,G);ctx.stroke();
-  ctx.strokeStyle='rgba(201,168,106,.18)';for(let x=-(FL.scroll*1.4%60);x<W;x+=60){ctx.beginPath();ctx.moveTo(x,G+15);ctx.lineTo(x+24,G+15);ctx.stroke();}
+  ctx.strokeStyle='rgba(201,168,106,.5)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(0,G);ctx.lineTo(W,G);ctx.stroke();
+  ctx.strokeStyle='rgba(201,168,106,.5)';ctx.lineWidth=3;for(let x=-(FL.scroll*1.8%48);x<W;x+=48){ctx.beginPath();ctx.moveTo(x,G+15);ctx.lineTo(x+18,G+15);ctx.stroke();}
   const hx=W*0.32,hy=G-16-k*(H-110);
   if(FL.state==='crashing'){drawExplosion(ctx,hx,G-16,dt);return;}
   const tilt=FL.state==='flying'?Math.max(-0.35,Math.min(0.35,-FL.vel*0.012)):FL.state==='crashed'?0.55:0;
@@ -954,11 +959,14 @@ function drawFlight(dt=0.016){
     ctx.fillStyle='rgba(232,213,168,.7)';ctx.font='20px "Noto Serif TC",serif';ctx.textAlign='right';ctx.fillText(Math.round(FL.alt)+' m',W-24,hy-8);ctx.textAlign='left';
   }
 }
-function drawMtn(ctx,m,W,H,off,col){
+function drawMtn(ctx,m,W,H,off,col,rim){
   const n=m.length,seg=W/(n-1),span=n*seg,o=((off%span)+span)%span;
-  ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(-seg,H);
-  for(let j=-1;j<=n+2;j++){const x=j*seg-o+seg*Math.floor(o/seg)-seg;const i=((Math.round((x+o)/seg))%n+n)%n;ctx.lineTo(x,m[i]);}
-  ctx.lineTo(W+seg*2,H);ctx.closePath();ctx.fill();
+  const pts=[];
+  for(let j=-1;j<=n+2;j++){const x=j*seg-o+seg*Math.floor(o/seg)-seg;const i=((Math.round((x+o)/seg))%n+n)%n;pts.push([x,m[i]]);}
+  ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(pts[0][0],H);
+  for(const p of pts)ctx.lineTo(p[0],p[1]);
+  ctx.lineTo(pts[pts.length-1][0],H);ctx.closePath();ctx.fill();
+  if(rim){ctx.strokeStyle=rim;ctx.lineWidth=1.5;ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.stroke();}
 }
 function drawHeli(ctx,x,y,tilt,rotorOn){
   ctx.save();ctx.translate(x,y);ctx.rotate(tilt);ctx.scale(1.6,1.6);
