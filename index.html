@@ -456,8 +456,8 @@ function fft(re,im){
       re[i+j]=uR+vR;im[i+j]=uI+vI;re[i+j+len/2]=uR-vR;im[i+j+len/2]=uI-vI;
       const t=cR*wR-cI*wI;cI=cR*wI+cI*wR;cR=t;}}}
 }
-function bandPower(samples){
-  const N=512, re=new Float64Array(N), im=new Float64Array(N);
+function bandPower(samples,N=512){
+  const re=new Float64Array(N), im=new Float64Array(N);
   const n=Math.min(samples.length,N), off=Math.max(0,samples.length-N);
   for(let i=0;i<n;i++){const w=0.5*(1-Math.cos(2*Math.PI*i/(n-1)));re[i]=samples[off+i]*w;}
   fft(re,im);
@@ -470,9 +470,9 @@ function bandPower(samples){
   return{delta,theta,alpha,beta,gamma,total:tot,
     rD:delta/tot,rT:theta/tot,rA:alpha/tot,rB:beta/tot,rG:gamma/tot,apFreq};
 }
-function avgBands(s1,s2){
+function avgBands(s1,s2,N=512){
   if(s1.length<128&&s2.length<128)return null;
-  const b1=s1.length>=128?bandPower(s1):null, b2=s2.length>=128?bandPower(s2):null;
+  const b1=s1.length>=128?bandPower(s1,N):null, b2=s2.length>=128?bandPower(s2,N):null;
   if(!b1)return b2;if(!b2)return b1;
   const r={};for(const k of Object.keys(b1))r[k]=(b1[k]+b2[k])/2;return r;
 }
@@ -854,7 +854,7 @@ function setHud(){document.getElementById('fl-alt').textContent=Math.round(FL.al
   document.getElementById('fl-time').textContent=Math.round(FL.time);document.getElementById('fl-max').textContent=Math.round(FL.maxAlt);}
 function flightGo(){
   if(FL.state!=='ready'&&FL.state!=='crashed')return;
-  Object.assign(FL,{state:'flying',alt:8,vel:0,maxAlt:0,start:Date.now(),time:0,lowT:0,expl:[],score:50,scroll:0,dist:0,obs:[],obsOn:false});
+  Object.assign(FL,{state:'flying',alt:8,vel:0,maxAlt:0,start:Date.now(),time:0,lowT:0,expl:[],score:50,scroll:0,dist:0,obs:[],obsOn:false,mid:50,trim:0});
   hideOv();const g=document.getElementById('fl-go');g.textContent='飛行中…';g.disabled=true;
 }
 function flightTick(){
@@ -876,11 +876,13 @@ function flightTick(){
     return;
   }
   if(FL.state==='flying'){
-    const b=avgBands(fp1,fp2);
+    const b=avgBands(fp1,fp2,256);   // 飛行用 1 秒視窗，反應快
     if(b&&!blinkArtifact()){
       const E=b.beta/((b.alpha+b.theta)||1);
       const raw=Math.max(-20,Math.min(120,(E-FL.eLo)/(FL.eHi-FL.eLo)*100));
-      FL.score=0.8*FL.score+0.2*raw;
+      // 起飛前 10 秒自動配平：把玩家的自然狀態調到懸停點
+      if(FL.time<OBS_START){FL.mid+=0.06*(raw-FL.mid);FL.trim=Math.max(-20,Math.min(20,FL.mid-50));}
+      FL.score=0.6*FL.score+0.4*(raw-FL.trim);
     }
     const s=Math.max(0,Math.min(100,FL.score));
     const msg=document.getElementById('fl-msg');
@@ -905,22 +907,27 @@ function flightTick(){
 function flightPhysics(dt){
   if(FL.state==='flying'){
     const s=Math.max(0,Math.min(100,FL.score));
-    FL.vel+=((s-50)/50)*260*dt;FL.vel*=Math.exp(-4*dt);FL.alt+=FL.vel*dt;
+    const th=s>60?(s-60)/40:s<40?(s-40)/40:0;   // 40–60 懸停死區
+    FL.vel+=th*260*dt;FL.vel*=Math.exp(-4*dt);FL.alt+=FL.vel*dt;
     if(FL.alt>100){FL.alt=100;FL.vel=0;}if(FL.alt<0){FL.alt=0;FL.vel=0;}
     FL.maxAlt=Math.max(FL.maxAlt,FL.alt);FL.time=(Date.now()-FL.start)/1000;
     const spd=160+s*3.2;FL.scroll+=spd*dt;FL.dist=FL.scroll/10;
-    if(FL.alt<=0.5&&s<45)FL.lowT+=dt;else FL.lowT=Math.max(0,FL.lowT-2*dt);
+    if(FL.alt<=0.5&&s<40)FL.lowT+=dt;else FL.lowT=Math.max(0,FL.lowT-2*dt);
     const W=1120,G=610,hx=W*0.32,hy=G-16-FL.alt/100*530;
     if(FL.time>=OBS_START){
       if(!FL.obsOn){FL.obsOn=true;FL.obsMsgT=Date.now();}
-      const last=FL.obs[FL.obs.length-1], gap=Math.max(620,1150-(FL.time-OBS_START)*10);
-      if(!last||last.x<W-gap){
+      const last=FL.obs[FL.obs.length-1], gap=Math.max(700,1300-(FL.time-OBS_START)*10), SPAWN=W+560;
+      if(!last||last.x<SPAWN-gap){
         const kind=['top','bottom','mid'][Math.floor(Math.random()*3)], grow=Math.min(1,(FL.time-OBS_START)/60);
-        let y1,y2;
-        if(kind==='top'){y1=0;y2=150+Math.random()*120+grow*90;}
-        else if(kind==='bottom'){y1=G-(150+Math.random()*120+grow*90);y2=G;}
-        else{const c=180+Math.random()*280,h=120+Math.random()*60+grow*60;y1=c-h/2;y2=c+h/2;}
-        FL.obs.push({x:W+80,w:72,y1,y2,kind});
+        // 天花板↔地面互換需要更長間距，保證來得及爬升／俯衝
+        const flip=last&&((last.kind==='top'&&kind==='bottom')||(last.kind==='bottom'&&kind==='top'));
+        if(!flip||last.x<SPAWN-1000){
+          let y1,y2;
+          if(kind==='top'){y1=0;y2=150+Math.random()*110+grow*80;}
+          else if(kind==='bottom'){y1=G-(150+Math.random()*110+grow*80);y2=G;}
+          else{const h=120+Math.random()*50+grow*40,c=220+Math.random()*200;y1=c-h/2;y2=c+h/2;}
+          FL.obs.push({x:SPAWN,w:72,y1,y2,kind});
+        }
       }
       for(const o of FL.obs)o.x-=spd*dt;
       FL.obs=FL.obs.filter(o=>o.x>-150);
@@ -973,8 +980,14 @@ function drawFlight(dt=0.016){
   ctx.strokeStyle='rgba(201,168,106,.5)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(0,G);ctx.lineTo(W,G);ctx.stroke();
   ctx.strokeStyle='rgba(201,168,106,.5)';ctx.lineWidth=3;for(let x=-(FL.scroll*1.8%48);x<W;x+=48){ctx.beginPath();ctx.moveTo(x,G+15);ctx.lineTo(x+18,G+15);ctx.stroke();}
   const hx=W*0.32,hy=G-16-k*(H-110);
-  // 障礙物
+  // 障礙物（還在畫面外的先在右緣標示）
   for(const o of FL.obs){
+    if(o.x>W){
+      const blink=0.45+0.4*Math.abs(Math.sin(FL.scroll*0.02)), ym=(o.y1+o.y2)/2;
+      ctx.strokeStyle=`rgba(232,213,168,${blink})`;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(W-8,o.y1+4);ctx.lineTo(W-8,o.y2-4);ctx.stroke();
+      ctx.fillStyle=`rgba(232,213,168,${blink})`;ctx.beginPath();ctx.moveTo(W-12,ym);ctx.lineTo(W-34,ym-14);ctx.lineTo(W-34,ym+14);ctx.closePath();ctx.fill();
+      continue;
+    }
     ctx.fillStyle='rgba(201,168,106,.22)';ctx.fillRect(o.x,o.y1,o.w,o.y2-o.y1);
     ctx.strokeStyle='rgba(232,213,168,.85)';ctx.lineWidth=2;ctx.strokeRect(o.x+1,o.y1+1,o.w-2,o.y2-o.y1-2);
     ctx.strokeStyle='rgba(232,213,168,.25)';ctx.lineWidth=1;
@@ -984,8 +997,14 @@ function drawFlight(dt=0.016){
   const tilt=FL.state==='flying'?Math.max(-0.35,Math.min(0.35,-FL.vel*0.012)):FL.state==='crashed'?0.55:0;
   drawHeli(ctx,hx,hy,tilt,FL.state==='flying');
   if(FL.state==='flying'){
-    ctx.strokeStyle='rgba(201,168,106,.25)';ctx.setLineDash([4,8]);ctx.beginPath();ctx.moveTo(hx+60,hy);ctx.lineTo(W-20,hy);ctx.stroke();ctx.setLineDash([]);
-    ctx.fillStyle='rgba(232,213,168,.7)';ctx.font='20px "Noto Serif TC",serif';ctx.textAlign='right';ctx.fillText(Math.round(FL.alt)+' m',W-24,hy-8);ctx.textAlign='left';
+    ctx.strokeStyle='rgba(201,168,106,.25)';ctx.setLineDash([4,8]);ctx.beginPath();ctx.moveTo(24,hy);ctx.lineTo(hx-130,hy);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='rgba(232,213,168,.7)';ctx.font='20px "Noto Serif TC",serif';ctx.fillText(Math.round(FL.alt)+' m',24,hy-8);
+    // 專注量表：40–60 為懸停區
+    const gx=24,gy=22,gw=220,gh=8;
+    ctx.fillStyle='rgba(255,255,255,.08)';ctx.fillRect(gx,gy,gw,gh);
+    ctx.fillStyle='rgba(201,168,106,.28)';ctx.fillRect(gx+gw*0.4,gy-2,gw*0.2,gh+4);
+    ctx.fillStyle=s>60?'#8fcfb0':s<40?'#d9b26a':'#e8d5a8';ctx.fillRect(gx,gy,gw*s/100,gh);
+    ctx.fillStyle='rgba(232,213,168,.75)';ctx.font='15px "Noto Sans TC",sans-serif';ctx.fillText('專注 '+Math.round(s)+(FL.time<OBS_START?'　（配平中）':''),gx,gy+30);
   }
 }
 function drawMtn(ctx,m,W,H,off,col,rim){
