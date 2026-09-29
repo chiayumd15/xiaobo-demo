@@ -318,6 +318,7 @@ h1,h2,.serif{font-family:var(--serif);font-weight:500;letter-spacing:.06em}
   <div class="flight-wrap">
     <div class="screen-head"><span class="eyebrow">肆 · Flight</span><h2>專注飛行</h2><p>專心就能爬升，分心就會下墜；貼地太久就墜機</p></div>
     <div class="flight-hud">
+      <div><b id="fl-dist">0</b><span>距離 m</span></div>
       <div><b id="fl-alt">0</b><span>高度 m</span></div>
       <div><b id="fl-time">0</b><span>飛行秒數</span></div>
       <div><b id="fl-max">0</b><span>最高</span></div>
@@ -830,14 +831,15 @@ function drawSpark(cv,hist,color){
    模式 4：專注飛行
    ═══════════════════════════════════════════ */
 const FL={state:'calib',phase:0,t0:0,lo:[],hi:[],eLo:null,eHi:null,score:50,alt:0,vel:0,maxAlt:0,
-  start:0,time:0,lowT:0,scroll:0,rotor:0,expl:[],explT:0};
+  start:0,time:0,lowT:0,scroll:0,rotor:0,expl:[],explT:0,dist:0,obs:[],obsOn:false,obsMsgT:0,crashY:594};
+const OBS_START=10;   // 起飛幾秒後開始出現障礙
 const flights=[];
 const CAL_PH=[{t:10,h:'放 空',p:'看著前方發呆 10 秒，什麼都不要想'},
               {t:10,h:'專 心',p:'心算：從 100 開始每次減 7，用力想！'}];
 let mtn0,mtn1,mtn2,clouds;
 function genMtn(n,amp,base){const a=[];let v=base;for(let i=0;i<n;i++){v+=(Math.random()-.5)*amp;v=Math.max(base-amp*1.2,Math.min(base+amp*1.2,v));a.push(v);}return a;}
 function resetFlight(){
-  Object.assign(FL,{state:'calib',phase:0,t0:Date.now(),lo:[],hi:[],eLo:null,eHi:null,score:50,alt:0,vel:0,maxAlt:0,start:0,time:0,lowT:0,scroll:0,expl:[]});
+  Object.assign(FL,{state:'calib',phase:0,t0:Date.now(),lo:[],hi:[],eLo:null,eHi:null,score:50,alt:0,vel:0,maxAlt:0,start:0,time:0,lowT:0,scroll:0,expl:[],dist:0,obs:[],obsOn:false});
   mtn2=genMtn(30,110,500);mtn1=genMtn(40,70,545);mtn0=genMtn(22,36,590);
   clouds=Array.from({length:9},()=>({x:Math.random()*1300,y:60+Math.random()*260,r:30+Math.random()*40,s:.4+Math.random()*.5}));
   const g=document.getElementById('fl-go');g.disabled=true;g.textContent='校準中';
@@ -848,11 +850,11 @@ function resetFlight(){
 function showOv(h,cd,p){document.getElementById('fl-ov').classList.add('show');
   document.getElementById('fl-ov-h').textContent=h;document.getElementById('fl-ov-cd').textContent=cd;document.getElementById('fl-ov-p').textContent=p;}
 function hideOv(){document.getElementById('fl-ov').classList.remove('show');}
-function setHud(){document.getElementById('fl-alt').textContent=Math.round(FL.alt);
+function setHud(){document.getElementById('fl-alt').textContent=Math.round(FL.alt);document.getElementById('fl-dist').textContent=Math.round(FL.dist);
   document.getElementById('fl-time').textContent=Math.round(FL.time);document.getElementById('fl-max').textContent=Math.round(FL.maxAlt);}
 function flightGo(){
   if(FL.state!=='ready'&&FL.state!=='crashed')return;
-  Object.assign(FL,{state:'flying',alt:8,vel:0,maxAlt:0,start:Date.now(),time:0,lowT:0,expl:[],score:50});
+  Object.assign(FL,{state:'flying',alt:8,vel:0,maxAlt:0,start:Date.now(),time:0,lowT:0,expl:[],score:50,scroll:0,dist:0,obs:[],obsOn:false});
   hideOv();const g=document.getElementById('fl-go');g.textContent='飛行中…';g.disabled=true;
 }
 function flightTick(){
@@ -882,7 +884,8 @@ function flightTick(){
     }
     const s=Math.max(0,Math.min(100,FL.score));
     const msg=document.getElementById('fl-msg');
-    if(FL.lowT>0.5){msg.textContent=`高度過低！${Math.max(0,3.2-FL.lowT).toFixed(1)} 秒後墜機`;msg.style.color='var(--crit)';}
+    if(FL.obsOn&&now-FL.obsMsgT<2500){msg.textContent='障礙物來了！上下閃避';msg.style.color='var(--gold)';}
+    else if(FL.lowT>0.5){msg.textContent=`高度過低！${Math.max(0,3.2-FL.lowT).toFixed(1)} 秒後墜機`;msg.style.color='var(--crit)';}
     else if(s>=70){msg.textContent='爬升中，保持專注';msg.style.color='var(--ok)';}
     else if(s<35){msg.textContent='分心了，正在下墜';msg.style.color='var(--warn)';}
     else msg.textContent='';
@@ -891,9 +894,9 @@ function flightTick(){
   if(FL.state==='crashing'&&FL.explT>=1.0){
     FL.state='crashed';
     const name=document.getElementById('fl-name').value.trim()||`飛行員 ${flights.length+1}`;
-    flights.forEach(f=>f.new=false);flights.push({name,time:FL.time,max:FL.maxAlt,new:true});
+    flights.forEach(f=>f.new=false);flights.push({name,dist:FL.dist,time:FL.time,max:FL.maxAlt,new:true});
     renderBoard();
-    showOv('墜 機','',`${name}　飛行 ${FL.time.toFixed(1)} 秒　最高 ${Math.round(FL.maxAlt)} m`);
+    showOv('墜 機','',`${name}　距離 ${Math.round(FL.dist)} m　飛行 ${FL.time.toFixed(1)} 秒　最高 ${Math.round(FL.maxAlt)} m`);
     const g=document.getElementById('fl-go');g.disabled=false;g.textContent='重飛';
     document.getElementById('fl-msg').textContent='';
   }
@@ -905,9 +908,28 @@ function flightPhysics(dt){
     FL.vel+=((s-50)/50)*260*dt;FL.vel*=Math.exp(-4*dt);FL.alt+=FL.vel*dt;
     if(FL.alt>100){FL.alt=100;FL.vel=0;}if(FL.alt<0){FL.alt=0;FL.vel=0;}
     FL.maxAlt=Math.max(FL.maxAlt,FL.alt);FL.time=(Date.now()-FL.start)/1000;
-    FL.scroll+=(160+s*3.2)*dt;
+    const spd=160+s*3.2;FL.scroll+=spd*dt;FL.dist=FL.scroll/10;
     if(FL.alt<=0.5&&s<45)FL.lowT+=dt;else FL.lowT=Math.max(0,FL.lowT-2*dt);
-    if(FL.lowT>=3.2){FL.state='crashing';FL.explT=0;
+    const W=1120,G=610,hx=W*0.32,hy=G-16-FL.alt/100*530;
+    if(FL.time>=OBS_START){
+      if(!FL.obsOn){FL.obsOn=true;FL.obsMsgT=Date.now();}
+      const last=FL.obs[FL.obs.length-1], gap=Math.max(620,1150-(FL.time-OBS_START)*10);
+      if(!last||last.x<W-gap){
+        const kind=['top','bottom','mid'][Math.floor(Math.random()*3)], grow=Math.min(1,(FL.time-OBS_START)/60);
+        let y1,y2;
+        if(kind==='top'){y1=0;y2=150+Math.random()*120+grow*90;}
+        else if(kind==='bottom'){y1=G-(150+Math.random()*120+grow*90);y2=G;}
+        else{const c=180+Math.random()*280,h=120+Math.random()*60+grow*60;y1=c-h/2;y2=c+h/2;}
+        FL.obs.push({x:W+80,w:72,y1,y2,kind});
+      }
+      for(const o of FL.obs)o.x-=spd*dt;
+      FL.obs=FL.obs.filter(o=>o.x>-150);
+      const bx1=hx-72,bx2=hx+44,by1=hy-34,by2=hy+32;
+      for(const o of FL.obs){
+        if(bx2>o.x&&bx1<o.x+o.w&&by2>o.y1&&by1<o.y2){FL.lowT=99;FL.crashY=hy;break;}
+      }
+    }
+    if(FL.lowT>=3.2){if(FL.lowT<99)FL.crashY=G-16;FL.state='crashing';FL.explT=0;
       FL.expl=Array.from({length:40},()=>({x:0,y:0,vx:(Math.random()-.5)*7,vy:-Math.random()*7,life:1,r:6+Math.random()*14,smoke:Math.random()<.4}));}
   }else if(FL.state==='crashing')FL.explT+=dt;
   else FL.scroll+=40*dt;
@@ -923,9 +945,9 @@ requestAnimationFrame(flightFrame);
 function renderBoard(){
   const el=document.getElementById('fl-board');
   if(!flights.length){el.innerHTML='';return;}
-  const rows=[...flights].sort((a,b)=>b.time-a.time).slice(0,6);
-  el.innerHTML='<table><tr><th>名次</th><th>飛行員</th><th>飛行秒數</th><th>最高高度</th></tr>'+
-    rows.map((f,i)=>`<tr class="${f.new?'new':''}"><td>${i+1}</td><td class="n">${escapeHtml(f.name)}</td><td>${f.time.toFixed(1)} s</td><td>${Math.round(f.max)} m</td></tr>`).join('')+'</table>';
+  const rows=[...flights].sort((a,b)=>b.dist-a.dist).slice(0,6);
+  el.innerHTML='<table><tr><th>名次</th><th>飛行員</th><th>距離</th><th>飛行秒數</th><th>最高高度</th></tr>'+
+    rows.map((f,i)=>`<tr class="${f.new?'new':''}"><td>${i+1}</td><td class="n">${escapeHtml(f.name)}</td><td>${Math.round(f.dist)} m</td><td>${f.time.toFixed(1)} s</td><td>${Math.round(f.max)} m</td></tr>`).join('')+'</table>';
 }
 function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
@@ -951,7 +973,14 @@ function drawFlight(dt=0.016){
   ctx.strokeStyle='rgba(201,168,106,.5)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(0,G);ctx.lineTo(W,G);ctx.stroke();
   ctx.strokeStyle='rgba(201,168,106,.5)';ctx.lineWidth=3;for(let x=-(FL.scroll*1.8%48);x<W;x+=48){ctx.beginPath();ctx.moveTo(x,G+15);ctx.lineTo(x+18,G+15);ctx.stroke();}
   const hx=W*0.32,hy=G-16-k*(H-110);
-  if(FL.state==='crashing'){drawExplosion(ctx,hx,G-16,dt);return;}
+  // 障礙物
+  for(const o of FL.obs){
+    ctx.fillStyle='rgba(201,168,106,.22)';ctx.fillRect(o.x,o.y1,o.w,o.y2-o.y1);
+    ctx.strokeStyle='rgba(232,213,168,.85)';ctx.lineWidth=2;ctx.strokeRect(o.x+1,o.y1+1,o.w-2,o.y2-o.y1-2);
+    ctx.strokeStyle='rgba(232,213,168,.25)';ctx.lineWidth=1;
+    for(let y=o.y1+14;y<o.y2-6;y+=14){ctx.beginPath();ctx.moveTo(o.x+8,y);ctx.lineTo(o.x+o.w-8,y);ctx.stroke();}
+  }
+  if(FL.state==='crashing'){drawExplosion(ctx,hx,FL.crashY,dt);return;}
   const tilt=FL.state==='flying'?Math.max(-0.35,Math.min(0.35,-FL.vel*0.012)):FL.state==='crashed'?0.55:0;
   drawHeli(ctx,hx,hy,tilt,FL.state==='flying');
   if(FL.state==='flying'){
