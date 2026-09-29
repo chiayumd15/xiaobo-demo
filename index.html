@@ -192,7 +192,7 @@ h1,h2,.serif{font-family:var(--serif);font-weight:500;letter-spacing:.06em}
   <span class="pill"><span class="dot" id="led"></span><span id="led-txt">未連線</span></span>
   <div class="acts">
     <button class="btn-sm btn-sim" id="btn-sim" onclick="toggleSim()">模擬模式</button>
-    <button class="btn-sm btn-conn" id="btn-conn" onclick="connectH3()">連接 H3</button>
+    <button class="btn-sm btn-conn" id="btn-conn" onclick="h3connected?disconnectH3():connectH3()">連接 H3</button>
   </div>
 </div>
 
@@ -388,19 +388,28 @@ async function connectH3(){
       feed(d.length>6?d.slice(6):d);
     });
     await write.writeValue(new Uint8Array([0x4B,0x59,0x58,0x42,0x10,0x80,0x00]));
-    h3connected=true; simMode=false; if(simTimer){clearInterval(simTimer);simTimer=null;}
+    h3dev=dev; h3connected=true; simMode=false; if(simTimer){clearInterval(simTimer);simTimer=null;}
+    fp1.length=0; fp2.length=0;
     document.getElementById('led').classList.add('on');
     document.getElementById('led-txt').textContent='H3 已連';
     document.getElementById('btn-sim').classList.remove('on');
+    document.getElementById('btn-conn').textContent='斷線';
     document.getElementById('home-hint').textContent='H3 已連線，選一個模式開始！';
-    dev.addEventListener('gattserverdisconnected',()=>{
-      h3connected=false;
-      document.getElementById('led').classList.remove('on');
-      document.getElementById('led-txt').textContent='已斷線';
-    });
+    dev.addEventListener('gattserverdisconnected',onH3Disconnected);
   }catch(e){
     document.getElementById('led-txt').textContent='連線失敗';
   }
+}
+function onH3Disconnected(){
+  h3connected=false; h3dev=null; fp1.length=0; fp2.length=0;
+  document.getElementById('led').classList.remove('on');
+  document.getElementById('led-txt').textContent='已斷線';
+  document.getElementById('btn-conn').textContent='連接 H3';
+  document.getElementById('home-hint').textContent='H3 已斷線，可重新連接或開啟模擬';
+}
+function disconnectH3(){
+  if(h3dev&&h3dev.gatt.connected)h3dev.gatt.disconnect();   // 會觸發 gattserverdisconnected
+  else onH3Disconnected();
 }
 
 // 模擬模式
