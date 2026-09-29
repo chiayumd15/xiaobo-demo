@@ -60,8 +60,9 @@ h1,h2,.serif{font-family:var(--serif);font-weight:500;letter-spacing:.06em}
 .home-intro{text-align:center;margin-top:40px;margin-bottom:36px}
 .home-intro h2{font-size:34px;letter-spacing:.18em}
 .home-intro p{color:var(--dim);font-size:13px;margin-top:10px;letter-spacing:.12em}
-.home-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:44px;width:100%;max-width:1080px;padding:0 12px}
-@media (max-width:760px){.home-grid{grid-template-columns:1fr;max-width:340px}}
+.home-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:28px;width:100%;max-width:1260px;padding:0 12px}
+@media (max-width:1000px){.home-grid{grid-template-columns:repeat(2,1fr);max-width:720px}}
+@media (max-width:560px){.home-grid{grid-template-columns:1fr;max-width:340px}}
 .mode-card{min-height:260px;background:linear-gradient(170deg,var(--panel2),var(--panel));
   border:1px solid var(--line);border-radius:18px;padding:30px 28px 26px;text-align:left;
   cursor:pointer;transition:.35s;position:relative;overflow:hidden;
@@ -70,7 +71,7 @@ h1,h2,.serif{font-family:var(--serif);font-weight:500;letter-spacing:.06em}
   opacity:0;transition:.35s}
 .mode-card:hover{transform:translateY(-4px);border-color:var(--line2);box-shadow:0 20px 50px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.08)}
 .mode-card:hover::after{opacity:1}
-.mode-card .glyph{position:absolute;right:16px;bottom:-18px;font-family:var(--serif);font-size:150px;line-height:1;
+.mode-card .glyph{position:absolute;right:14px;bottom:-16px;font-family:var(--serif);font-size:130px;line-height:1;
   color:rgba(201,168,106,.07);pointer-events:none;transition:.35s}
 .mode-card:hover .glyph{color:rgba(201,168,106,.12);transform:translateY(-6px)}
 .mode-card h2{font-size:26px;margin-bottom:12px;position:relative}
@@ -154,6 +155,33 @@ h1,h2,.serif{font-family:var(--serif);font-weight:500;letter-spacing:.06em}
 .focus-stats .fs .fl{font-size:10.5px;letter-spacing:.25em;color:var(--dim);margin-top:4px}
 .spark-box{width:100%;max-width:520px;height:64px;background:var(--panel);border-radius:10px;border:1px solid var(--line);overflow:hidden}
 .spark-box canvas{width:100%;height:100%}
+
+/* ── 專注飛行 ── */
+.flight-wrap{display:flex;flex-direction:column;align-items:center;width:100%;max-width:740px}
+.flight-hud{display:flex;gap:44px;margin:4px 0 12px}
+.flight-hud div{text-align:center}
+.flight-hud b{display:block;font-family:var(--serif);font-weight:400;font-size:30px;line-height:1;margin-bottom:5px}
+.flight-hud span{font-size:10.5px;letter-spacing:.25em;color:var(--dim)}
+.flight-box{width:100%;max-width:720px;aspect-ratio:7/4;position:relative;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#0b1020}
+.flight-box canvas{width:100%;height:100%;display:block}
+.flight-overlay{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(7,8,11,.58);backdrop-filter:blur(3px);text-align:center;padding:20px}
+.flight-overlay.show{display:flex}
+.flight-overlay h3{font-family:var(--serif);font-weight:500;font-size:36px;letter-spacing:.3em;margin-bottom:6px}
+.flight-overlay p{color:var(--ink);font-size:14.5px;letter-spacing:.08em;line-height:1.8}
+.flight-overlay .cd{font-family:var(--serif);font-size:64px;color:var(--gold2);line-height:1.1;margin:4px 0 8px;min-height:20px}
+.flight-ctl{display:flex;gap:12px;align-items:center;margin:16px 0 6px;flex-wrap:wrap;justify-content:center}
+.flight-ctl input{background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:11px 18px;
+  font-size:14px;font-family:var(--sans);width:220px;letter-spacing:.05em}
+.flight-ctl input:focus{outline:none;border-color:var(--line2)}
+.btn-fortune:disabled{opacity:.4;cursor:default}
+.btn-fortune:disabled:hover{background:transparent;color:var(--gold)}
+.board{width:100%;max-width:720px;margin-top:10px}
+.board table{width:100%;border-collapse:collapse}
+.board th{font-weight:400;font-size:10.5px;letter-spacing:.25em;color:var(--dim);text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
+.board td{padding:9px 6px;border-bottom:1px solid var(--line);font-family:var(--serif);font-size:16px}
+.board td.n{font-family:var(--sans);font-size:13.5px;font-weight:300}
+.board tr.new td{color:var(--gold2)}
 </style>
 </head>
 <body>
@@ -173,7 +201,7 @@ h1,h2,.serif{font-family:var(--serif);font-weight:500;letter-spacing:.06em}
   <div class="home-intro">
     <span class="eyebrow">Brainwave Interactive</span>
     <h2>讀你的腦波</h2>
-    <p>三條電極 · 三種解讀 · 一分鐘看見自己</p>
+    <p>三條電極 · 四種玩法 · 一分鐘看見自己</p>
   </div>
   <div class="home-grid">
     <div class="mode-card" onclick="go('fortune')">
@@ -196,6 +224,13 @@ h1,h2,.serif{font-family:var(--serif);font-weight:500;letter-spacing:.06em}
       <p>β／(α+θ) 投入指數化為火焰<br>分心的瞬間一目瞭然</p>
       <div class="rule"></div>
       <span class="glyph">專</span>
+    </div>
+    <div class="mode-card" onclick="go('flight')">
+      <span class="eyebrow">肆 · Flight</span>
+      <h2>專注飛行</h2>
+      <p>專心就能爬升，分心就會下墜<br>看誰飛得最久、最高</p>
+      <div class="rule"></div>
+      <span class="glyph">飛</span>
     </div>
   </div>
   <p class="home-hint" id="home-hint">請先連接 H3 或開啟模擬模式</p>
@@ -274,6 +309,29 @@ h1,h2,.serif{font-family:var(--serif);font-weight:500;letter-spacing:.06em}
     </div>
     <div class="spark-box"><canvas id="foc-spark"></canvas></div>
     <div class="calib-msg" id="f-calib"></div>
+  </div>
+</div>
+
+<!-- 專注飛行 -->
+<div class="screen" id="scr-flight">
+  <button class="back-btn" onclick="go('home')">← 返回</button>
+  <div class="flight-wrap">
+    <div class="screen-head"><span class="eyebrow">肆 · Flight</span><h2>專注飛行</h2><p>專心就能爬升，分心就會下墜；貼地太久就墜機</p></div>
+    <div class="flight-hud">
+      <div><b id="fl-alt">0</b><span>高度 m</span></div>
+      <div><b id="fl-time">0</b><span>飛行秒數</span></div>
+      <div><b id="fl-max">0</b><span>最高</span></div>
+    </div>
+    <div class="flight-box">
+      <canvas id="fl-cv" width="1120" height="640"></canvas>
+      <div class="flight-overlay" id="fl-ov"><h3 id="fl-ov-h"></h3><div class="cd" id="fl-ov-cd"></div><p id="fl-ov-p"></p></div>
+    </div>
+    <div class="calib-msg" id="fl-msg"></div>
+    <div class="flight-ctl">
+      <input id="fl-name" placeholder="飛行員名字（選填）" maxlength="12">
+      <button class="btn-fortune" id="fl-go" onclick="flightGo()" disabled>校準中</button>
+    </div>
+    <div class="board" id="fl-board"></div>
   </div>
 </div>
 
@@ -428,6 +486,16 @@ function go(name){
   curScreen=name;
   if(name==='conscious') resetConscious();
   if(name==='focus') resetFocus();
+  if(name==='flight') resetFlight();
+}
+
+// 眨眼／額肌假影：最近 0.5 秒峰對峰過大就略過這一筆
+function blinkArtifact(){
+  if(fp1.length<125)return false;
+  const seg=hp(new Float64Array(fp1.slice(-125)),0.3);
+  let mn=Infinity,mx=-Infinity;
+  for(let i=5;i<seg.length;i++){if(seg[i]<mn)mn=seg[i];if(seg[i]>mx)mx=seg[i];}
+  return mx-mn>150;
 }
 
 /* ═══════════════════════════════════════════
@@ -594,6 +662,7 @@ function focusTick(){
   const b=avgBands(fp1,fp2);if(!b)return;
   const E=b.beta/((b.alpha+b.theta)||1); // engagement index
   const elapsed=(Date.now()-focStart)/1000;
+  if(blinkArtifact())return;
 
   if(focMu===null){
     focBase.push(E);
@@ -758,6 +827,149 @@ function drawSpark(cv,hist,color){
 }
 
 /* ═══════════════════════════════════════════
+   模式 4：專注飛行
+   ═══════════════════════════════════════════ */
+const FL={state:'calib',phase:0,t0:0,lo:[],hi:[],eLo:null,eHi:null,score:50,alt:0,vel:0,maxAlt:0,
+  start:0,time:0,lowT:0,scroll:0,rotor:0,expl:[],explT:0};
+const flights=[];
+const CAL_PH=[{t:10,h:'放 空',p:'看著前方發呆 10 秒，什麼都不要想'},
+              {t:10,h:'專 心',p:'心算：從 100 開始每次減 7，用力想！'}];
+let mtn1,mtn2,clouds;
+function genMtn(n,amp,base){const a=[];let v=base;for(let i=0;i<n;i++){v+=(Math.random()-.5)*amp;v=Math.max(base-amp*1.2,Math.min(base+amp*1.2,v));a.push(v);}return a;}
+function resetFlight(){
+  Object.assign(FL,{state:'calib',phase:0,t0:Date.now(),lo:[],hi:[],eLo:null,eHi:null,score:50,alt:0,vel:0,maxAlt:0,start:0,time:0,lowT:0,scroll:0,expl:[]});
+  mtn1=genMtn(40,60,470);mtn2=genMtn(30,110,520);
+  clouds=Array.from({length:9},()=>({x:Math.random()*1300,y:60+Math.random()*260,r:30+Math.random()*40,s:.4+Math.random()*.5}));
+  const g=document.getElementById('fl-go');g.disabled=true;g.textContent='校準中';
+  document.getElementById('fl-msg').textContent='';
+  setHud();renderBoard();
+  showOv(CAL_PH[0].h,'10',CAL_PH[0].p);
+}
+function showOv(h,cd,p){document.getElementById('fl-ov').classList.add('show');
+  document.getElementById('fl-ov-h').textContent=h;document.getElementById('fl-ov-cd').textContent=cd;document.getElementById('fl-ov-p').textContent=p;}
+function hideOv(){document.getElementById('fl-ov').classList.remove('show');}
+function setHud(){document.getElementById('fl-alt').textContent=Math.round(FL.alt);
+  document.getElementById('fl-time').textContent=Math.round(FL.time);document.getElementById('fl-max').textContent=Math.round(FL.maxAlt);}
+function flightGo(){
+  if(FL.state!=='ready'&&FL.state!=='crashed')return;
+  Object.assign(FL,{state:'flying',alt:8,vel:0,maxAlt:0,start:Date.now(),time:0,lowT:0,expl:[],score:50});
+  hideOv();const g=document.getElementById('fl-go');g.textContent='飛行中…';g.disabled=true;
+}
+function flightTick(){
+  const now=Date.now();
+  if(FL.state==='calib'){
+    const b=avgBands(fp1,fp2), ph=CAL_PH[FL.phase], el=(now-FL.t0)/1000;
+    document.getElementById('fl-ov-cd').textContent=Math.max(0,Math.ceil(ph.t-el));
+    if(b&&!blinkArtifact()){const E=b.beta/((b.alpha+b.theta)||1);(FL.phase===0?FL.lo:FL.hi).push(E);}
+    if(el>=ph.t){
+      if(FL.phase===0){FL.phase=1;FL.t0=now;showOv(CAL_PH[1].h,'10',CAL_PH[1].p);}
+      else{
+        const m=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+        FL.eLo=m(FL.lo)??0.2;FL.eHi=m(FL.hi)??FL.eLo*1.6;
+        if(FL.eHi<FL.eLo*1.15)FL.eHi=FL.eLo*1.6;   // 兩段分不開就用固定倍率
+        FL.state='ready';showOv('校準完成','','按「起飛」開始，專心就能爬升');
+        const g=document.getElementById('fl-go');g.disabled=false;g.textContent='起飛';
+      }
+    }
+    return;
+  }
+  if(FL.state==='flying'){
+    const b=avgBands(fp1,fp2);
+    if(b&&!blinkArtifact()){
+      const E=b.beta/((b.alpha+b.theta)||1);
+      const raw=Math.max(-20,Math.min(120,(E-FL.eLo)/(FL.eHi-FL.eLo)*100));
+      FL.score=0.8*FL.score+0.2*raw;
+    }
+    const s=Math.max(0,Math.min(100,FL.score));
+    FL.vel+=((s-50)/50)*0.35;FL.vel*=0.85;FL.alt+=FL.vel*0.9;
+    if(FL.alt>100){FL.alt=100;FL.vel=0;}if(FL.alt<0){FL.alt=0;FL.vel=0;}
+    FL.maxAlt=Math.max(FL.maxAlt,FL.alt);FL.time=(now-FL.start)/1000;FL.scroll+=1.2+s/45;
+    if(FL.alt<=0.5&&s<45)FL.lowT+=0.08;else FL.lowT=Math.max(0,FL.lowT-0.16);
+    const msg=document.getElementById('fl-msg');
+    if(FL.lowT>0.5){msg.textContent=`高度過低！${Math.max(0,3.2-FL.lowT).toFixed(1)} 秒後墜機`;msg.style.color='var(--crit)';}
+    else if(s>=70){msg.textContent='爬升中，保持專注';msg.style.color='var(--ok)';}
+    else if(s<35){msg.textContent='分心了，正在下墜';msg.style.color='var(--warn)';}
+    else msg.textContent='';
+    if(FL.lowT>=3.2){FL.state='crashing';FL.explT=0;
+      FL.expl=Array.from({length:40},()=>({x:0,y:0,vx:(Math.random()-.5)*7,vy:-Math.random()*7,life:1,r:6+Math.random()*14,smoke:Math.random()<.4}));}
+    setHud();return;
+  }
+  if(FL.state==='crashing'&&++FL.explT>=22){
+    FL.state='crashed';
+    const name=document.getElementById('fl-name').value.trim()||`飛行員 ${flights.length+1}`;
+    flights.forEach(f=>f.new=false);flights.push({name,time:FL.time,max:FL.maxAlt,new:true});
+    renderBoard();
+    showOv('墜 機','',`${name}　飛行 ${FL.time.toFixed(1)} 秒　最高 ${Math.round(FL.maxAlt)} m`);
+    const g=document.getElementById('fl-go');g.disabled=false;g.textContent='重飛';
+    document.getElementById('fl-msg').textContent='';
+  }
+}
+function renderBoard(){
+  const el=document.getElementById('fl-board');
+  if(!flights.length){el.innerHTML='';return;}
+  const rows=[...flights].sort((a,b)=>b.time-a.time).slice(0,6);
+  el.innerHTML='<table><tr><th>名次</th><th>飛行員</th><th>飛行秒數</th><th>最高高度</th></tr>'+
+    rows.map((f,i)=>`<tr class="${f.new?'new':''}"><td>${i+1}</td><td class="n">${escapeHtml(f.name)}</td><td>${f.time.toFixed(1)} s</td><td>${Math.round(f.max)} m</td></tr>`).join('')+'</table>';
+}
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+function drawFlight(){
+  const cv=document.getElementById('fl-cv'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  const s=Math.max(0,Math.min(100,FL.score)),k=FL.alt/100,G=H-30;
+  const sky=ctx.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,`hsl(${225-k*10},${38+k*18}%,${8+k*16}%)`);sky.addColorStop(1,`hsl(228,30%,${5+k*6}%)`);
+  ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+  if(k>0.55){ctx.fillStyle=`rgba(232,213,168,${(k-0.55)*1.4})`;
+    for(let i=0;i<40;i++){const x=(i*173+FL.scroll*0.1)%W,y=(i*97)%(H*0.5);ctx.fillRect(x,y,1.5,1.5);}}
+  for(const c of clouds){c.x-=(1.2+s/45)*c.s;if(c.x<-c.r*3)c.x=W+c.r*3;
+    ctx.fillStyle=`rgba(200,205,220,${0.05+k*0.06})`;ctx.beginPath();
+    ctx.ellipse(c.x,c.y,c.r*1.6,c.r*0.55,0,0,6.283);ctx.ellipse(c.x-c.r*0.6,c.y+4,c.r*0.9,c.r*0.45,0,0,6.283);ctx.ellipse(c.x+c.r*0.7,c.y+3,c.r,c.r*0.5,0,0,6.283);ctx.fill();}
+  drawMtn(ctx,mtn2,W,H,FL.scroll*0.25,'#141828');
+  drawMtn(ctx,mtn1,W,H,FL.scroll*0.6,'#0c0e18');
+  ctx.fillStyle='#07080b';ctx.fillRect(0,G,W,30);
+  ctx.strokeStyle='rgba(201,168,106,.35)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,G);ctx.lineTo(W,G);ctx.stroke();
+  ctx.strokeStyle='rgba(201,168,106,.18)';for(let x=-(FL.scroll*1.4%60);x<W;x+=60){ctx.beginPath();ctx.moveTo(x,G+15);ctx.lineTo(x+24,G+15);ctx.stroke();}
+  const hx=W*0.32,hy=G-16-k*(H-110);
+  if(FL.state==='crashing'){drawExplosion(ctx,hx,G-16);return;}
+  const tilt=FL.state==='flying'?Math.max(-0.35,Math.min(0.35,-FL.vel*0.08)):FL.state==='crashed'?0.55:0;
+  drawHeli(ctx,hx,hy,tilt,FL.state==='flying');
+  if(FL.state==='flying'){
+    ctx.strokeStyle='rgba(201,168,106,.25)';ctx.setLineDash([4,8]);ctx.beginPath();ctx.moveTo(hx+60,hy);ctx.lineTo(W-20,hy);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='rgba(232,213,168,.7)';ctx.font='20px "Noto Serif TC",serif';ctx.textAlign='right';ctx.fillText(Math.round(FL.alt)+' m',W-24,hy-8);ctx.textAlign='left';
+  }
+}
+function drawMtn(ctx,m,W,H,off,col){
+  const n=m.length,seg=W/(n-1),span=n*seg,o=((off%span)+span)%span;
+  ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(-seg,H);
+  for(let j=-1;j<=n+2;j++){const x=j*seg-o+seg*Math.floor(o/seg)-seg;const i=((Math.round((x+o)/seg))%n+n)%n;ctx.lineTo(x,m[i]);}
+  ctx.lineTo(W+seg*2,H);ctx.closePath();ctx.fill();
+}
+function drawHeli(ctx,x,y,tilt,rotorOn){
+  ctx.save();ctx.translate(x,y);ctx.rotate(tilt);ctx.scale(1.6,1.6);
+  ctx.strokeStyle='#e8d5a8';ctx.lineWidth=4;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(-14,0);ctx.lineTo(-58,-8);ctx.moveTo(-58,-8);ctx.lineTo(-62,-24);ctx.stroke();
+  FL.rotor++;const a=FL.rotor*0.9;
+  ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-62-Math.cos(a)*9,-24-Math.sin(a)*9);ctx.lineTo(-62+Math.cos(a)*9,-24+Math.sin(a)*9);ctx.stroke();
+  ctx.fillStyle='#c9a86a';ctx.beginPath();ctx.ellipse(0,0,26,13,0,0,6.283);ctx.fill();
+  ctx.fillStyle='#0b1020';ctx.beginPath();ctx.ellipse(9,-3,10,7,0,0,6.283);ctx.fill();
+  ctx.strokeStyle='#e8d5a8';ctx.lineWidth=2.5;ctx.beginPath();
+  ctx.moveTo(-8,12);ctx.lineTo(-10,20);ctx.moveTo(8,12);ctx.lineTo(10,20);ctx.moveTo(-20,20);ctx.lineTo(20,20);ctx.stroke();
+  ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,-13);ctx.lineTo(0,-20);ctx.stroke();
+  const sp=rotorOn?Math.abs(Math.sin(FL.rotor*1.3)):1;
+  ctx.globalAlpha=0.5+0.5*sp;ctx.beginPath();ctx.moveTo(-48*sp-4,-20);ctx.lineTo(48*sp+4,-20);ctx.stroke();ctx.globalAlpha=1;
+  ctx.restore();
+}
+function drawExplosion(ctx,x,y){
+  ctx.globalCompositeOperation='lighter';
+  for(const p of FL.expl){p.x+=p.vx;p.y+=p.vy;p.vy+=0.25;p.life-=0.045;if(p.life<=0)continue;
+    const r=p.r*(1.4-p.life*0.4),g=ctx.createRadialGradient(x+p.x,y+p.y,0,x+p.x,y+p.y,r);
+    if(p.smoke){g.addColorStop(0,`rgba(120,120,130,${p.life*0.35})`);g.addColorStop(1,'rgba(80,80,90,0)');}
+    else{g.addColorStop(0,`hsla(45,100%,80%,${p.life})`);g.addColorStop(0.5,`hsla(22,100%,50%,${p.life*0.6})`);g.addColorStop(1,'hsla(8,90%,30%,0)');}
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(x+p.x,y+p.y,r,0,6.283);ctx.fill();}
+  ctx.globalCompositeOperation='source-over';
+}
+
+/* ═══════════════════════════════════════════
    主迴圈
    ═══════════════════════════════════════════ */
 let lastTick=0;
@@ -769,6 +981,11 @@ function loop(ts){
   if(!hasData&&!h3connected&&!simMode){
     if(curScreen==='conscious')document.getElementById('c-state').textContent='請先連接 H3 或開啟模擬';
     if(curScreen==='focus')document.getElementById('foc-msg').textContent='請先連接 H3 或開啟模擬';
+    if(curScreen==='flight')document.getElementById('fl-msg').textContent='請先連接 H3 或開啟模擬';
+  }
+  if(curScreen==='flight'){
+    flightTick();
+    drawFlight();
   }
 
   if(curScreen==='fortune'){
