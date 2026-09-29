@@ -881,20 +881,14 @@ function flightTick(){
       FL.score=0.8*FL.score+0.2*raw;
     }
     const s=Math.max(0,Math.min(100,FL.score));
-    FL.vel+=((s-50)/50)*0.35;FL.vel*=0.85;FL.alt+=FL.vel*0.9;
-    if(FL.alt>100){FL.alt=100;FL.vel=0;}if(FL.alt<0){FL.alt=0;FL.vel=0;}
-    FL.maxAlt=Math.max(FL.maxAlt,FL.alt);FL.time=(now-FL.start)/1000;FL.scroll+=1.2+s/45;
-    if(FL.alt<=0.5&&s<45)FL.lowT+=0.08;else FL.lowT=Math.max(0,FL.lowT-0.16);
     const msg=document.getElementById('fl-msg');
     if(FL.lowT>0.5){msg.textContent=`高度過低！${Math.max(0,3.2-FL.lowT).toFixed(1)} 秒後墜機`;msg.style.color='var(--crit)';}
     else if(s>=70){msg.textContent='爬升中，保持專注';msg.style.color='var(--ok)';}
     else if(s<35){msg.textContent='分心了，正在下墜';msg.style.color='var(--warn)';}
     else msg.textContent='';
-    if(FL.lowT>=3.2){FL.state='crashing';FL.explT=0;
-      FL.expl=Array.from({length:40},()=>({x:0,y:0,vx:(Math.random()-.5)*7,vy:-Math.random()*7,life:1,r:6+Math.random()*14,smoke:Math.random()<.4}));}
     setHud();return;
   }
-  if(FL.state==='crashing'&&++FL.explT>=22){
+  if(FL.state==='crashing'&&FL.explT>=1.0){
     FL.state='crashed';
     const name=document.getElementById('fl-name').value.trim()||`飛行員 ${flights.length+1}`;
     flights.forEach(f=>f.new=false);flights.push({name,time:FL.time,max:FL.maxAlt,new:true});
@@ -904,6 +898,28 @@ function flightTick(){
     document.getElementById('fl-msg').textContent='';
   }
 }
+// 物理與捲動以真實秒數計算，由獨立 rAF 每幀呼叫
+function flightPhysics(dt){
+  if(FL.state==='flying'){
+    const s=Math.max(0,Math.min(100,FL.score));
+    FL.vel+=((s-50)/50)*140*dt;FL.vel*=Math.exp(-4*dt);FL.alt+=FL.vel*dt;
+    if(FL.alt>100){FL.alt=100;FL.vel=0;}if(FL.alt<0){FL.alt=0;FL.vel=0;}
+    FL.maxAlt=Math.max(FL.maxAlt,FL.alt);FL.time=(Date.now()-FL.start)/1000;
+    FL.scroll+=(80+s*1.6)*dt;
+    if(FL.alt<=0.5&&s<45)FL.lowT+=dt;else FL.lowT=Math.max(0,FL.lowT-2*dt);
+    if(FL.lowT>=3.2){FL.state='crashing';FL.explT=0;
+      FL.expl=Array.from({length:40},()=>({x:0,y:0,vx:(Math.random()-.5)*7,vy:-Math.random()*7,life:1,r:6+Math.random()*14,smoke:Math.random()<.4}));}
+  }else if(FL.state==='crashing')FL.explT+=dt;
+  else FL.scroll+=20*dt;
+}
+let flLast=0;
+function flightFrame(ts){
+  requestAnimationFrame(flightFrame);
+  if(curScreen!=='flight'||!mtn1)return;
+  const dt=Math.min(0.1,Math.max(0.001,(ts-flLast)/1000));flLast=ts;
+  flightPhysics(dt);drawFlight(dt);
+}
+requestAnimationFrame(flightFrame);
 function renderBoard(){
   const el=document.getElementById('fl-board');
   if(!flights.length){el.innerHTML='';return;}
@@ -913,7 +929,7 @@ function renderBoard(){
 }
 function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
-function drawFlight(){
+function drawFlight(dt=0.016){
   const cv=document.getElementById('fl-cv'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
   const s=Math.max(0,Math.min(100,FL.score)),k=FL.alt/100,G=H-30;
   const sky=ctx.createLinearGradient(0,0,0,H);
@@ -921,7 +937,7 @@ function drawFlight(){
   ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
   if(k>0.55){ctx.fillStyle=`rgba(232,213,168,${(k-0.55)*1.4})`;
     for(let i=0;i<40;i++){const x=(i*173+FL.scroll*0.1)%W,y=(i*97)%(H*0.5);ctx.fillRect(x,y,1.5,1.5);}}
-  for(const c of clouds){c.x-=(1.2+s/45)*c.s;if(c.x<-c.r*3)c.x=W+c.r*3;
+  for(const c of clouds){c.x-=(40+s*0.8)*c.s*dt;if(c.x<-c.r*3)c.x=W+c.r*3;
     ctx.fillStyle=`rgba(200,205,220,${0.05+k*0.06})`;ctx.beginPath();
     ctx.ellipse(c.x,c.y,c.r*1.6,c.r*0.55,0,0,6.283);ctx.ellipse(c.x-c.r*0.6,c.y+4,c.r*0.9,c.r*0.45,0,0,6.283);ctx.ellipse(c.x+c.r*0.7,c.y+3,c.r,c.r*0.5,0,0,6.283);ctx.fill();}
   drawMtn(ctx,mtn2,W,H,FL.scroll*0.25,'#141828');
@@ -930,8 +946,8 @@ function drawFlight(){
   ctx.strokeStyle='rgba(201,168,106,.35)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,G);ctx.lineTo(W,G);ctx.stroke();
   ctx.strokeStyle='rgba(201,168,106,.18)';for(let x=-(FL.scroll*1.4%60);x<W;x+=60){ctx.beginPath();ctx.moveTo(x,G+15);ctx.lineTo(x+24,G+15);ctx.stroke();}
   const hx=W*0.32,hy=G-16-k*(H-110);
-  if(FL.state==='crashing'){drawExplosion(ctx,hx,G-16);return;}
-  const tilt=FL.state==='flying'?Math.max(-0.35,Math.min(0.35,-FL.vel*0.08)):FL.state==='crashed'?0.55:0;
+  if(FL.state==='crashing'){drawExplosion(ctx,hx,G-16,dt);return;}
+  const tilt=FL.state==='flying'?Math.max(-0.35,Math.min(0.35,-FL.vel*0.012)):FL.state==='crashed'?0.55:0;
   drawHeli(ctx,hx,hy,tilt,FL.state==='flying');
   if(FL.state==='flying'){
     ctx.strokeStyle='rgba(201,168,106,.25)';ctx.setLineDash([4,8]);ctx.beginPath();ctx.moveTo(hx+60,hy);ctx.lineTo(W-20,hy);ctx.stroke();ctx.setLineDash([]);
@@ -959,9 +975,10 @@ function drawHeli(ctx,x,y,tilt,rotorOn){
   ctx.globalAlpha=0.5+0.5*sp;ctx.beginPath();ctx.moveTo(-48*sp-4,-20);ctx.lineTo(48*sp+4,-20);ctx.stroke();ctx.globalAlpha=1;
   ctx.restore();
 }
-function drawExplosion(ctx,x,y){
+function drawExplosion(ctx,x,y,dt=0.033){
   ctx.globalCompositeOperation='lighter';
-  for(const p of FL.expl){p.x+=p.vx;p.y+=p.vy;p.vy+=0.25;p.life-=0.045;if(p.life<=0)continue;
+  const k=dt*30;
+  for(const p of FL.expl){p.x+=p.vx*k;p.y+=p.vy*k;p.vy+=0.25*k;p.life-=0.045*k;if(p.life<=0)continue;
     const r=p.r*(1.4-p.life*0.4),g=ctx.createRadialGradient(x+p.x,y+p.y,0,x+p.x,y+p.y,r);
     if(p.smoke){g.addColorStop(0,`rgba(120,120,130,${p.life*0.35})`);g.addColorStop(1,'rgba(80,80,90,0)');}
     else{g.addColorStop(0,`hsla(45,100%,80%,${p.life})`);g.addColorStop(0.5,`hsla(22,100%,50%,${p.life*0.6})`);g.addColorStop(1,'hsla(8,90%,30%,0)');}
@@ -983,10 +1000,7 @@ function loop(ts){
     if(curScreen==='focus')document.getElementById('foc-msg').textContent='請先連接 H3 或開啟模擬';
     if(curScreen==='flight')document.getElementById('fl-msg').textContent='請先連接 H3 或開啟模擬';
   }
-  if(curScreen==='flight'){
-    flightTick();
-    drawFlight();
-  }
+  if(curScreen==='flight')flightTick();
 
   if(curScreen==='fortune'){
     drawOrb();
